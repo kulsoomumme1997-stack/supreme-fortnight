@@ -182,6 +182,15 @@ export const ALLERGEN_MAP: Record<string, Allergen> = ALLERGENS.reduce(
   {}
 );
 
+export function getMatchedKeywords(text: string, allergenId: string): string[] {
+  const allergen = ALLERGEN_MAP[allergenId];
+  if (!allergen) return [];
+  return allergen.keywords.filter((kw) => {
+    const regex = new RegExp(`(?<![a-z])${kw.replace(/[-/]/g, '[-/]')}(?![a-z])`, 'i');
+    return regex.test(text);
+  });
+}
+
 export function detectAllergens(text: string): string[] {
   const lowerText = text.toLowerCase();
   const found: string[] = [];
