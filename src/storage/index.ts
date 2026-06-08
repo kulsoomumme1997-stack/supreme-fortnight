@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FoodLogEntry, UserSensitivities } from '../types';
+import { FoodLogEntry, UserSensitivities, EliminationPlan } from '../types';
 
 const KEYS = {
   SENSITIVITIES: '@sensitivity_tracker:sensitivities',
   FOOD_LOGS: '@sensitivity_tracker:food_logs',
+  ELIMINATION_PLANS: '@sensitivity_tracker:elimination_plans',
+  SAFE_FOODS: '@sensitivity_tracker:safe_foods',
 };
 
 // ─── User Sensitivities ────────────────────────────────────────────────────────
@@ -17,7 +19,7 @@ export async function loadSensitivities(): Promise<UserSensitivities> {
   } catch (e) {
     console.warn('loadSensitivities error', e);
   }
-  return { known: [], suspected: [], quizCompleted: false };
+  return { known: [], suspected: [], quizCompleted: false, mode: null };
 }
 
 export async function saveSensitivities(data: UserSensitivities): Promise<void> {
@@ -64,8 +66,79 @@ export async function deleteFoodLog(id: string): Promise<void> {
 
 export async function clearAllData(): Promise<void> {
   try {
-    await AsyncStorage.multiRemove([KEYS.SENSITIVITIES, KEYS.FOOD_LOGS]);
+    await AsyncStorage.multiRemove([
+      KEYS.SENSITIVITIES,
+      KEYS.FOOD_LOGS,
+      KEYS.ELIMINATION_PLANS,
+      KEYS.SAFE_FOODS,
+    ]);
   } catch (e) {
     console.warn('clearAllData error', e);
+  }
+}
+
+// ─── Elimination Plans ────────────────────────────────────────────────────────
+
+export async function loadEliminationPlans(): Promise<EliminationPlan[]> {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.ELIMINATION_PLANS);
+    if (raw) {
+      return JSON.parse(raw) as EliminationPlan[];
+    }
+  } catch (e) {
+    console.warn('loadEliminationPlans error', e);
+  }
+  return [];
+}
+
+export async function saveEliminationPlan(plan: EliminationPlan): Promise<void> {
+  try {
+    const plans = await loadEliminationPlans();
+    plans.unshift(plan);
+    await AsyncStorage.setItem(KEYS.ELIMINATION_PLANS, JSON.stringify(plans));
+  } catch (e) {
+    console.warn('saveEliminationPlan error', e);
+  }
+}
+
+export async function updateEliminationPlan(plan: EliminationPlan): Promise<void> {
+  try {
+    const plans = await loadEliminationPlans();
+    const updated = plans.map((p) => (p.id === plan.id ? plan : p));
+    await AsyncStorage.setItem(KEYS.ELIMINATION_PLANS, JSON.stringify(updated));
+  } catch (e) {
+    console.warn('updateEliminationPlan error', e);
+  }
+}
+
+export async function deleteEliminationPlan(id: string): Promise<void> {
+  try {
+    const plans = await loadEliminationPlans();
+    const updated = plans.filter((p) => p.id !== id);
+    await AsyncStorage.setItem(KEYS.ELIMINATION_PLANS, JSON.stringify(updated));
+  } catch (e) {
+    console.warn('deleteEliminationPlan error', e);
+  }
+}
+
+// ─── Safe Foods ───────────────────────────────────────────────────────────────
+
+export async function getSafeFoods(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.SAFE_FOODS);
+    if (raw) {
+      return JSON.parse(raw) as string[];
+    }
+  } catch (e) {
+    console.warn('getSafeFoods error', e);
+  }
+  return [];
+}
+
+export async function saveSafeFoods(foods: string[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(KEYS.SAFE_FOODS, JSON.stringify(foods));
+  } catch (e) {
+    console.warn('saveSafeFoods error', e);
   }
 }

@@ -59,6 +59,7 @@ function EntryDetailModal({
   onDelete: (id: string) => void;
 }) {
   if (!entry) return null;
+  const currentEntry = entry;
   const date = new Date(entry.date);
   const dateStr = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -73,7 +74,7 @@ function EntryDetailModal({
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            onDelete(entry.id);
+            onDelete(currentEntry.id);
             onClose();
           },
         },

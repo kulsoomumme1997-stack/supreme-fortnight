@@ -3,24 +3,34 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { loadSensitivities } from '../storage';
 
 import HomeScreen from '../screens/HomeScreen';
 import FoodLogScreen from '../screens/FoodLogScreen';
 import LogHistoryScreen from '../screens/LogHistoryScreen';
 import IngredientScannerScreen from '../screens/IngredientScannerScreen';
 import QuizScreen from '../screens/QuizScreen';
+import ModeSelectScreen from '../screens/ModeSelectScreen';
+import InsightsScreen from '../screens/InsightsScreen';
+import EliminationGuideScreen from '../screens/EliminationGuideScreen';
+import SafeFoodsScreen from '../screens/SafeFoodsScreen';
 
 export type RootStackParamList = {
   MainTabs: undefined;
   Quiz: undefined;
   FoodLog: undefined;
   LogDetail: { entryId: string };
+  ModeSelect: undefined;
+  EliminationGuide: undefined;
+  SafeFoods: undefined;
 };
 
 export type TabParamList = {
   Home: undefined;
   History: undefined;
   Scanner: undefined;
+  Insights: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -31,6 +41,7 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     Home: '🏠',
     History: '📋',
     Scanner: '🔍',
+    Insights: '📊',
   };
   return (
     <View style={{ alignItems: 'center' }}>
@@ -40,6 +51,18 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
 }
 
 function MainTabs() {
+  const [mode, setMode] = React.useState<'investigate' | 'manage' | null>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      loadSensitivities().then((s) => {
+        if (active) setMode(s.mode);
+      });
+      return () => { active = false; };
+    }, [])
+  );
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -62,6 +85,9 @@ function MainTabs() {
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Dashboard' }} />
       <Tab.Screen name="History" component={LogHistoryScreen} options={{ title: 'Food Log' }} />
       <Tab.Screen name="Scanner" component={IngredientScannerScreen} options={{ title: 'Ingredient Scanner' }} />
+      {mode === 'investigate' && (
+        <Tab.Screen name="Insights" component={InsightsScreen} options={{ title: 'Insights' }} />
+      )}
     </Tab.Navigator>
   );
 }
@@ -90,6 +116,21 @@ export default function AppNavigator() {
           name="FoodLog"
           component={FoodLogScreen}
           options={{ title: 'Log a Meal', headerBackTitle: 'Back' }}
+        />
+        <Stack.Screen
+          name="ModeSelect"
+          component={ModeSelectScreen}
+          options={{ title: 'Choose Your Path', headerBackTitle: 'Back' }}
+        />
+        <Stack.Screen
+          name="EliminationGuide"
+          component={EliminationGuideScreen}
+          options={{ title: 'Elimination Guide', headerBackTitle: 'Back' }}
+        />
+        <Stack.Screen
+          name="SafeFoods"
+          component={SafeFoodsScreen}
+          options={{ title: 'Safe Foods', headerBackTitle: 'Back' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

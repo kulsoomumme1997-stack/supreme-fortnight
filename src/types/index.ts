@@ -23,4 +23,13 @@ export interface UserSensitivities {
   known: AllergenId[];      // confirmed allergies/intolerances
   suspected: AllergenId[];  // suspected from quiz
   quizCompleted: boolean;
+  mode: 'investigate' | 'manage' | null;
+}
+
+export interface EliminationPlan {
+  id: string;
+  allergenId: AllergenId;
+  startDate: string; // ISO string
+  phase: 'eliminating' | 'reintroducing' | 'completed';
+  notes: string;
 }

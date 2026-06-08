@@ -10,7 +10,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ALLERGEN_MAP } from '../constants/allergens';
-import { loadSensitivities, loadFoodLogs } from '../storage';
+import { loadSensitivities, loadFoodLogs, getSafeFoods } from '../storage';
 import { UserSensitivities, FoodLogEntry } from '../types';
 import { RootStackParamList } from '../navigation';
 
@@ -72,22 +72,27 @@ export default function HomeScreen() {
     known: [],
     suspected: [],
     quizCompleted: false,
+    mode: null,
   });
   const [recentLogs, setRecentLogs] = useState<FoodLogEntry[]>([]);
+  const [safeFoods, setSafeFoods] = useState<string[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
-        const [sens, logs] = await Promise.all([loadSensitivities(), loadFoodLogs()]);
+        const [sens, logs, safe] = await Promise.all([loadSensitivities(), loadFoodLogs(), getSafeFoods()]);
         if (active) {
           setSensitivities(sens);
           setRecentLogs(logs.slice(0, 3));
+          setSafeFoods(safe);
         }
       })();
       return () => { active = false; };
     }, [])
   );
+
+  const recentSymptomLogs = recentLogs.filter((e) => e.severity > 0 || e.symptoms.length > 0);
 
   const allSensitivities = [
     ...sensitivities.known.map((id) => ({ id, type: 'known' as const })),
@@ -104,6 +109,27 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>Your Sensitivity Dashboard</Text>
           <Text style={styles.subtitle}>Track your food reactions and sensitivities</Text>
         </View>
+
+        {/* Mode banner */}
+        {sensitivities.quizCompleted && !sensitivities.mode && (
+          <TouchableOpacity
+            style={styles.modeBanner}
+            onPress={() => navigation.navigate('ModeSelect')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.quizBannerContent}>
+              <Text style={styles.quizBannerIcon}>🧭</Text>
+              <View style={styles.quizBannerText}>
+                <Text style={styles.quizBannerTitle}>Choose How You'd Like to Use the App</Text>
+                <Text style={styles.quizBannerSubtitle}>
+                  Pick "Investigate" if you're trying to find a cause, or "Manage" if you already
+                  know your triggers.
+                </Text>
+              </View>
+              <Text style={styles.quizBannerArrow}>→</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* Quiz banner */}
         {!sensitivities.quizCompleted && (
@@ -151,6 +177,115 @@ export default function HomeScreen() {
               })}
             </View>
             <Text style={styles.chipLegend}>? = suspected only</Text>
+          </View>
+        )}
+
+        {/* Investigate mode highlights */}
+        {sensitivities.mode === 'investigate' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Investigate Mode</Text>
+            <View style={styles.actionGrid}>
+              <TouchableOpacity
+                style={[styles.actionCard, styles.modeActionCard, { backgroundColor: '#EEF2FF' }]}
+                onPress={() => (navigation as any).navigate('MainTabs', { screen: 'Insights' })}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.actionIcon}>📊</Text>
+                <Text style={styles.actionLabel}>View Your Insights</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionCard, styles.modeActionCard, { backgroundColor: '#FEF2F2' }]}
+                onPress={() => navigation.navigate('EliminationGuide')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.actionIcon}>🧪</Text>
+                <Text style={styles.actionLabel}>Elimination Guide</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.sectionTitle, styles.subsectionTitle]}>Recent Symptoms</Text>
+            {recentSymptomLogs.length === 0 ? (
+              <View style={styles.subtleCard}>
+                <Text style={styles.subtleCardText}>
+                  No symptoms reported in your most recent logs — nice! Keep logging meals so we
+                  can spot patterns over time.
+                </Text>
+              </View>
+            ) : (
+              recentSymptomLogs.map((entry) => (
+                <View key={entry.id} style={styles.symptomSummaryRow}>
+                  <SeverityBadge severity={entry.severity} />
+                  <View style={styles.symptomSummaryTextWrap}>
+                    <Text style={styles.symptomSummaryFoods} numberOfLines={1}>{entry.foods}</Text>
+                    <Text style={styles.symptomSummarySymptoms} numberOfLines={1}>
+                      {entry.symptoms.join(', ') || 'Symptoms reported'}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        )}
+
+        {/* Manage mode highlights */}
+        {sensitivities.mode === 'manage' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Manage Mode</Text>
+            <View style={styles.actionGrid}>
+              <TouchableOpacity
+                style={[styles.actionCard, styles.modeActionCard, { backgroundColor: '#F0FDF4' }]}
+                onPress={() => navigation.navigate('SafeFoods')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.actionIcon}>🥗</Text>
+                <Text style={styles.actionLabel}>Safe Foods</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionCard, styles.modeActionCard, { backgroundColor: '#EEF2FF' }]}
+                onPress={() => (navigation as any).navigate('MainTabs', { screen: 'Scanner' })}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.actionIcon}>🔍</Text>
+                <Text style={styles.actionLabel}>Scan Ingredients</Text>
+              </TouchableOpacity>
+            </View>
+
+            {sensitivities.known.length > 0 && (
+              <>
+                <Text style={[styles.sectionTitle, styles.subsectionTitle]}>Your Known Allergens</Text>
+                <View style={styles.chipRow}>
+                  {sensitivities.known.map((id) => {
+                    const a = ALLERGEN_MAP[id];
+                    if (!a) return null;
+                    return (
+                      <View key={id} style={[styles.sensitivityChip, { backgroundColor: a.color }]}>
+                        <Text style={styles.sensitivityChipText}>{a.name}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            <Text style={[styles.sectionTitle, styles.subsectionTitle]}>Safe Foods</Text>
+            {safeFoods.length === 0 ? (
+              <TouchableOpacity style={styles.subtleCard} onPress={() => navigation.navigate('SafeFoods')}>
+                <Text style={styles.subtleCardText}>
+                  You haven't added any confirmed-safe foods yet. Tap to start your list.
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.subtleCard}>
+                {safeFoods.slice(0, 5).map((food) => (
+                  <Text key={food} style={styles.safeFoodLine} numberOfLines={1}>✅ {food}</Text>
+                ))}
+                {safeFoods.length > 5 && (
+                  <TouchableOpacity onPress={() => navigation.navigate('SafeFoods')}>
+                    <Text style={styles.viewAllLink}>View all {safeFoods.length} →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
         )}
 
@@ -254,6 +389,12 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
   },
+  modeBanner: {
+    backgroundColor: '#0EA5E9',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+  },
   quizBannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -328,6 +469,52 @@ const styles = StyleSheet.create({
     padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modeActionCard: {
+    width: '48%',
+  },
+  subsectionTitle: {
+    fontSize: 15,
+    marginTop: 16,
+    marginBottom: 10,
+  },
+  subtleCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+  },
+  subtleCardText: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 19,
+  },
+  symptomSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    gap: 10,
+  },
+  symptomSummaryTextWrap: {
+    flex: 1,
+  },
+  symptomSummaryFoods: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  symptomSummarySymptoms: {
+    fontSize: 12,
+    color: '#B91C1C',
+    marginTop: 2,
+  },
+  safeFoodLine: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '600',
+    marginBottom: 6,
   },
   actionIcon: {
     fontSize: 32,

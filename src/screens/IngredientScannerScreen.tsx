@@ -9,7 +9,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { ALLERGENS, ALLERGEN_MAP, detectAllergens, getMatchedKeywords } from '../constants/allergens';
+import { ALLERGENS, ALLERGEN_MAP, detectAllergens, getMatchedKeywords, getAmbiguousMatches } from '../constants/allergens';
 import { loadSensitivities } from '../storage';
 import { UserSensitivities } from '../types';
 
@@ -76,10 +76,12 @@ export default function IngredientScannerScreen() {
   const [inputText, setInputText] = useState('');
   const [scanned, setScanned] = useState(false);
   const [detectedIds, setDetectedIds] = useState<string[]>([]);
+  const [ambiguousTerms, setAmbiguousTerms] = useState<string[]>([]);
   const [sensitivities, setSensitivities] = useState<UserSensitivities>({
     known: [],
     suspected: [],
     quizCompleted: false,
+    mode: null,
   });
 
   useFocusEffect(
@@ -96,12 +98,14 @@ export default function IngredientScannerScreen() {
     if (!inputText.trim()) return;
     const ids = detectAllergens(inputText);
     setDetectedIds(ids);
+    setAmbiguousTerms(getAmbiguousMatches(inputText));
     setScanned(true);
   }
 
   function handleClear() {
     setInputText('');
     setDetectedIds([]);
+    setAmbiguousTerms([]);
     setScanned(false);
   }
 
@@ -252,6 +256,22 @@ export default function IngredientScannerScreen() {
                   );
                 })}
               </>
+            )}
+
+            {ambiguousTerms.length > 0 && (
+              <View style={styles.ambiguousBox}>
+                <Text style={styles.ambiguousTitle}>⚠️ Worth double-checking</Text>
+                <Text style={styles.ambiguousSubtitle}>
+                  These terms can sometimes hide an allergen depending on the brand or recipe. They aren't a confirmed match, but you may want to check with the manufacturer or read the full label.
+                </Text>
+                <View style={styles.chipRow}>
+                  {ambiguousTerms.map((term) => (
+                    <View key={term} style={styles.ambiguousChip}>
+                      <Text style={styles.ambiguousChipText}>{term}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
             )}
 
             {/* Legend */}
@@ -486,5 +506,42 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 13,
     color: '#6B7280',
+  },
+  ambiguousBox: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+  },
+  ambiguousTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#92400E',
+    marginBottom: 6,
+  },
+  ambiguousSubtitle: {
+    fontSize: 13,
+    color: '#92400E',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  ambiguousChip: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  ambiguousChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
   },
 });

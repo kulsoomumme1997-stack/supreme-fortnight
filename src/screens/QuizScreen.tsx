@@ -11,7 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ALLERGENS, ALLERGEN_MAP } from '../constants/allergens';
-import { saveSensitivities } from '../storage';
+import { saveSensitivities, loadSensitivities } from '../storage';
 import { AllergenId } from '../types';
 import { RootStackParamList } from '../navigation';
 
@@ -143,10 +143,12 @@ export default function QuizScreen() {
     setSaving(true);
     const suspected = computeSuspected();
     setSuspectedResult(suspected);
+    const existing = await loadSensitivities();
     await saveSensitivities({
       known: quizState.knownAllergens,
       suspected,
       quizCompleted: true,
+      mode: existing.mode,
     });
     setSaving(false);
     setStep(5); // results step
@@ -226,9 +228,9 @@ export default function QuizScreen() {
 
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={() => navigation.navigate('MainTabs')}
+            onPress={() => navigation.navigate('ModeSelect')}
           >
-            <Text style={styles.primaryButtonText}>Go to Dashboard</Text>
+            <Text style={styles.primaryButtonText}>Choose How You'd Like to Use the App →</Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>

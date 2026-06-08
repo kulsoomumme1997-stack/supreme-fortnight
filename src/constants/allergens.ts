@@ -9,7 +9,9 @@ export const ALLERGENS: Allergen[] = [
       'wheat', 'barley', 'rye', 'oat', 'oats', 'flour', 'bread', 'pasta', 'semolina',
       'spelt', 'kamut', 'farro', 'durum', 'triticale', 'malt', 'bulgur', 'couscous',
       'gluten', 'starch', 'wheat starch', 'wheat flour', 'breadcrumbs', 'croutons',
-      'seitan', 'farina', 'wheat germ', 'wheat bran',
+      'seitan', 'farina', 'wheat germ', 'wheat bran', 'brewer\'s yeast', 'brewers yeast',
+      'malt extract', 'malt vinegar', 'malt syrup', 'graham flour', 'einkorn',
+      'matzo', 'matzah', 'panko', 'rusk', 'vital wheat gluten', 'hydrolyzed wheat protein',
     ],
     color: '#F59E0B',
   },
@@ -22,7 +24,9 @@ export const ALLERGENS: Allergen[] = [
       'whey', 'casein', 'lactose', 'ghee', 'curd', 'kefir', 'fromage', 'brie',
       'cheddar', 'mozzarella', 'parmesan', 'ricotta', 'sour cream', 'half-and-half',
       'condensed milk', 'evaporated milk', 'ice cream', 'custard', 'lactalbumin',
-      'lactoglobulin', 'buttermilk', 'skimmed milk',
+      'lactoglobulin', 'buttermilk', 'skimmed milk', 'whey protein', 'whey powder',
+      'caseinate', 'sodium caseinate', 'calcium caseinate', 'milk solids', 'milk powder',
+      'rennet casein', 'paneer', 'quark', 'mascarpone', 'gelato', 'milk fat', 'butterfat',
     ],
     color: '#3B82F6',
   },
@@ -34,7 +38,9 @@ export const ALLERGENS: Allergen[] = [
       'egg', 'eggs', 'egg white', 'egg yolk', 'albumin', 'ovalbumin', 'lysozyme',
       'mayonnaise', 'mayo', 'meringue', 'hollandaise', 'egg powder', 'dried egg',
       'egg solids', 'globulin', 'livetin', 'ovalbumin', 'ovomucin', 'ovomucoid',
-      'ovotransferrin', 'silici albuminate',
+      'ovotransferrin', 'silici albuminate', 'egg lecithin', 'egg substitute',
+      'pasteurized egg', 'whole egg', 'egg replacer', 'apovitellenin', 'vitellin',
+      'simplesse',
     ],
     color: '#EAB308',
   },
@@ -100,7 +106,9 @@ export const ALLERGENS: Allergen[] = [
     keywords: [
       'soy', 'soya', 'soybean', 'soybeans', 'tofu', 'tempeh', 'miso', 'edamame',
       'soy sauce', 'tamari', 'shoyu', 'soy milk', 'soy protein', 'textured vegetable protein',
-      'tvp', 'hydrolyzed soy protein', 'soy lecithin', 'natto',
+      'tvp', 'hydrolyzed soy protein', 'soy lecithin', 'natto', 'lecithin', 'soybean oil',
+      'soy flour', 'soy nuts', 'okara', 'yuba', 'soy isolate', 'soy protein isolate',
+      'vegetable broth', 'vegetable starch',
     ],
     color: '#65A30D',
   },
@@ -176,6 +184,30 @@ export const ALLERGENS: Allergen[] = [
     color: '#EF4444',
   },
 ];
+
+// Terms that *may* contain allergens depending on the manufacturer/recipe, but aren't
+// a confirmed match on their own. Worth a closer look — e.g. checking with the brand
+// or reading the full label — rather than treated as a definite allergen hit.
+export const AMBIGUOUS_TERMS: string[] = [
+  'natural flavoring', 'natural flavor', 'natural flavours', 'artificial flavoring',
+  'modified food starch', 'modified starch', 'spices', 'spice blend', 'seasoning',
+  'flavoring', 'flavourings', 'emulsifier', 'emulsifiers', 'mono- and diglycerides',
+  'vegetable oil', 'vegetable protein', 'glycerides', 'enzymes', 'yeast extract',
+  'hydrolyzed plant protein', 'hydrolyzed vegetable protein', 'stabilizer', 'stabilizers',
+  'gum base', 'broth', 'stock', 'starch', 'protein blend',
+];
+
+export function getAmbiguousMatches(text: string): string[] {
+  const lowerText = text.toLowerCase();
+  const found: string[] = [];
+  for (const term of AMBIGUOUS_TERMS) {
+    const regex = new RegExp(`(?<![a-z])${term.replace(/[-/]/g, '[-/]')}(?![a-z])`, 'i');
+    if (regex.test(lowerText) && !found.includes(term)) {
+      found.push(term);
+    }
+  }
+  return found;
+}
 
 export const ALLERGEN_MAP: Record<string, Allergen> = ALLERGENS.reduce(
   (acc, allergen) => ({ ...acc, [allergen.id]: allergen }),
